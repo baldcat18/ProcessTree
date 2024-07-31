@@ -1,5 +1,5 @@
-@{
-	ModuleVersion = '1.0.1'
+﻿@{
+	ModuleVersion = '2.0.0'
 	GUID = 'e66c3c53-cd0b-4368-aff8-2fd99f54355c'
 	Author = 'BaldCat'
 	Copyright = '(c) 2023 BaldCat. All rights reserved.'
@@ -12,7 +12,8 @@
 	AliasesToExport = @()
 	PrivateData = @{
 		PSData = @{
-			Tags = @('Process', 'Tree')
+			ProjectUri = 'https://github.com/baldcat18/ProcessTree'
+			Tags = @('Process', 'Tree', 'Windows')
 		}
 	}
 }

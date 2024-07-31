@@ -1,2 +1,2 @@
-# ProcessTree
-This module writes the process tree.
+# PSProcessTree
+プロセスの親子関係をツリー表示する PowerShell モジュールです。
