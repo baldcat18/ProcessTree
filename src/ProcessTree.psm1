@@ -2,6 +2,15 @@
 using namespace System.Diagnostics.CodeAnalysis
 
 $esc = [char]27
+if ($PSStyle) {
+	$cyan = $PSStyle.Foreground.Cyan
+	$brightYellow = $PSStyle.Foreground.BrightYellow
+	$reset = $PSStyle.Reset
+} else {
+	$cyan = "$esc[96m"
+	$brightYellow = "$esc[93m"
+	$reset = "$esc[m"
+}
 
 function Get-ProcessTree {
 	<#
@@ -68,21 +77,21 @@ function foreachCimProcessGroup {
 		if (!$name) { $name = $process.ProcessName }
 
 		[pscustomobject][ordered]@{
-			'PID' = $process.ProcessId
+			'ProcessId' = $process.ProcessId
 			'Threads' = $process.ThreadCount
 			$nameHeader = "$('  ' * $Indentation)$name"
 		}
 
 		$title = (Get-Process -Id $process.ProcessId -ErrorAction Ignore).MainWindowTitle
 		if ($title) {
-			[pscustomobject]@{ $nameHeader = "$('  ' * ($Indentation + 2))$esc[96mWindowTitle$esc[m: $title" }
+			[pscustomobject]@{ $nameHeader = "$('  ' * ($Indentation + 2))${cyan}WindowTitle${reset}: $title" }
 		}
 
 		if ($Service -and $serviceTable.Contains($process.ProcessId)) {
 			$tab2 = '  ' * ($Indentation + 2)
 
 			$serviceTable[$process.ProcessId] | ForEach-Object {
-				[pscustomobject]@{ $nameHeader = "$tab2$esc[93mService$esc[m: $($_.DisplayName)" }
+				[pscustomobject]@{ $nameHeader = "$tab2${brightYellow}Service${reset}: $($_.DisplayName)" }
 			}
 		}
 
