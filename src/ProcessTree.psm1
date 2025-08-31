@@ -1,8 +1,12 @@
-﻿using namespace System.Collections
-using namespace System.Diagnostics.CodeAnalysis
+﻿using namespace System.Diagnostics.CodeAnalysis
 
 $esc = [char]27
-if ($PSStyle) {
+if ($Host.Name -eq 'Windows PowerShell ISE Host') {
+	# ISEはエスケープシーケンスをサポートしていない
+	$cyan = ''
+	$brightYellow = ''
+	$reset = ''
+} elseif ($PSStyle) {
 	$cyan = $PSStyle.Foreground.Cyan
 	$brightYellow = $PSStyle.Foreground.BrightYellow
 	$reset = $PSStyle.Reset
@@ -11,6 +15,8 @@ if ($PSStyle) {
 	$brightYellow = "$esc[93m"
 	$reset = "$esc[m"
 }
+
+$isWin11OrLater = [Environment]::OSVersion.Version -ge '10.0.22000'
 
 function Get-ProcessTree {
 	<#
@@ -38,6 +44,7 @@ function Get-ProcessTree {
 	)
 
 	$processes = Get-CimInstance Win32_Process | Sort-Object ProcessId
+	if ($isWin11OrLater) { $cpuTable = getCpuUsageTable }
 
 	$pidTable = $processes | Group-Object ProcessId -AsHashTable
 	foreach ($proc in $processes) {
@@ -60,6 +67,20 @@ function Get-ProcessTree {
 	foreachCimProcessGroup $processGroup[0].Group 0
 }
 
+function getCpuUsageTable {
+	$table = @{}
+	$cpuCount = [System.Environment]::ProcessorCount
+
+	(Get-Counter '\Process V2(*)\% Processor Time' -ErrorAction Ignore).CounterSamples |
+		Where-Object InstanceName -NE _total |
+		ForEach-Object {
+			$processId = [uint32]($_.InstanceName -replace '^.+:(\d+)$', '$1')
+			$table[$processId] = ($_.CookedValue / $cpuCount).ToString('0.00').PadLeft(8)
+		}
+
+	return $table
+}
+
 function isInvaldParentProcess {
 	param ($process)
 
@@ -76,11 +97,14 @@ function foreachCimProcessGroup {
 		$name = if ($Path) { $process.ExecutablePath } elseif ($CommandLine) { $process.CommandLine }
 		if (!$name) { $name = $process.ProcessName }
 
-		[pscustomobject][ordered]@{
-			'ProcessId' = $process.ProcessId
-			'Threads' = $process.ThreadCount
-			$nameHeader = "$('  ' * $Indentation)$name"
+		$processTable = [ordered]@{ 'ProcessId' = $process.ProcessId }
+		if ($isWin11OrLater) {
+			$processTable['CpuUsage'] = `
+				if ($cpuTable.Contains($process.ProcessId)) { $cpuTable[$process.ProcessId] } else { 'N/A' }
 		}
+		$processTable['Threads'] = $process.ThreadCount
+		$processTable[$nameHeader] = "$('  ' * $Indentation)$name"
+		[pscustomobject]$processTable
 
 		$title = (Get-Process -Id $process.ProcessId -ErrorAction Ignore).MainWindowTitle
 		if ($title) {
